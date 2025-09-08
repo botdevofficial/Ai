@@ -204,9 +204,9 @@
         // --- View Counter Script ---
         (async function updateViewCount() {
             const BIN_ID = 'YOUR_BIN_ID_HERE';
-            const API_KEY = '$2a$10$YOUR_JSONBIN_API_KEY_HERE'; // It's fine to have a read/write key here for this simple use case.
+            const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your jsonbin.io key
 
-            if (BIN_ID === 'YOUR_BIN_ID_HERE') return; // Don't run if not configured
+            if (BIN_ID === 'YOUR_BIN_ID_HERE') return; 
 
             const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
             try {
@@ -238,7 +238,7 @@
 
         // !!! IMPORTANT !!!
         // REPLACE this with your actual Gemini API key
-        const GEMINI_API_KEY = "AIzaSyAy2Zo7FKkarjp0MTe88Mo6Yj5U_uJCKws";
+        const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE";
         
         aiChatButton.addEventListener('click', () => {
             aiChatModal.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
@@ -248,7 +248,6 @@
             aiChatModal.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
         });
         
-        // Close modal if clicking outside the chat window
         aiChatModal.addEventListener('click', (e) => {
             if (e.target === aiChatModal) {
                  aiChatModal.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
@@ -275,14 +274,16 @@
             
             messageWrapper.appendChild(messageBubble);
             chatMessages.appendChild(messageWrapper);
-            chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
         
         async function askAdsphereAI(userQuery) {
-            if (GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
+            // --- IMPROVED API KEY CHECK ---
+            if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
                 addMessage("AI chat is not configured. Please add a Gemini API key in the HTML source.", "ai");
                 return;
             }
+            // --- END OF IMPROVED CHECK ---
 
             chatLoading.classList.remove('hidden');
 
@@ -342,6 +343,7 @@
             }
         }
     </script>
+                
 </body>
 </html>
 
