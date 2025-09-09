@@ -199,23 +199,18 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script>
-        // --- View Counter Script ---
+       <script>
+        // --- View Counter Script (No change) ---
         (async function updateViewCount() {
             const BIN_ID = 'YOUR_BIN_ID_HERE';
-            const API_KEY = 'YOUR_API_KEY_HERE'; // Replace with your jsonbin.io key
-
-            if (BIN_ID === 'YOUR_BIN_ID_HERE') return; 
-
+            const API_KEY = 'YOUR_API_KEY_HERE';
+            if (BIN_ID === 'YOUR_BIN_ID_HERE') return;
             const API_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
             try {
                 const getResponse = await fetch(`${API_URL}/latest`, { headers: { 'X-Master-Key': API_KEY } });
                 let data = { views: 0 };
                 if (getResponse.ok) data = (await getResponse.json()).record;
-
                 const newViews = (data.views || 0) + 1;
-
                 await fetch(API_URL, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
@@ -227,33 +222,37 @@
             }
         })();
 
-        // --- AI Chat Script ---
+        // --- AI Chat Script (Updated) ---
+
+        // --- STEP 1: CONFIGURE YOUR IMAGE REPOSITORY ---
+        // Replace with your GitHub username and repository name.
+        const GITHUB_USERNAME = "YOUR_USERNAME";
+        const GITHUB_REPO = "YOUR_REPO_NAME";
+        const GITHUB_BRANCH = "main"; // Usually 'main' or 'master'
+        const IMAGE_BASE_URL = `https://raw.githubusercontent.com/${GITHUB_USERNAME}/${GITHUB_REPO}/${GITHUB_BRANCH}/`;
+
+        // --- STEP 2: LIST YOUR AVAILABLE IMAGES HERE ---
+        // The AI will use these filenames. Add all the images you uploaded.
+        const imageDatabase = {
+            "main.png": "A screenshot showing the main menu of the ADsphere bot.",
+            "earn_credits_view.png": "An example of the task list for earning credits.",
+            "createpromo.png": "The menu for creating a new promotion."
+            // Add more images here, e.g., "premium_benefits.png": "A graphic showing premium benefits."
+        };
+
         const aiChatButton = document.getElementById('aiChatButton');
         const aiChatModal = document.getElementById('aiChatModal');
         const closeChatButton = document.getElementById('closeChatButton');
         const chatForm = document.getElementById('chatForm');
         const chatInput = document.getElementById('chatInput');
         const chatMessages = document.getElementById('chatMessages');
-        const chatLoading = document.getElementById('chatLoading');
 
-        // !!! IMPORTANT !!!
-        // REPLACE this with your actual Gemini API key
         const GEMINI_API_KEY = "AIzaSyAy2Zo7FKkarjp0MTe88Mo6Yj5U_uJCKws";
         
-        aiChatButton.addEventListener('click', () => {
-            aiChatModal.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
-        });
-
-        closeChatButton.addEventListener('click', () => {
-            aiChatModal.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
-        });
-        
-        aiChatModal.addEventListener('click', (e) => {
-            if (e.target === aiChatModal) {
-                 aiChatModal.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
-            }
-        });
-
+        // Event listeners (No change)
+        aiChatButton.addEventListener('click', () => aiChatModal.classList.remove('opacity-0', 'pointer-events-none', 'scale-95'));
+        closeChatButton.addEventListener('click', () => aiChatModal.classList.add('opacity-0', 'pointer-events-none', 'scale-95'));
+        aiChatModal.addEventListener('click', (e) => { if (e.target === aiChatModal) aiChatModal.classList.add('opacity-0', 'pointer-events-none', 'scale-95'); });
         chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const userQuery = chatInput.value.trim();
@@ -264,60 +263,108 @@
             }
         });
 
+        // --- NEW: A simple and safe Markdown-to-HTML parser ---
+        function parseMarkdown(text) {
+            // Escape HTML to prevent XSS, except for our own tags
+            const escapeHtml = (unsafe) => unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            
+            let html = escapeHtml(text);
+
+            // 1. Handle Images: [image:filename.png]
+            html = html.replace(/\[image:([^\]]+)\]/g, (match, filename) => {
+                if (imageDatabase[filename]) {
+                    return `<img src="${IMAGE_BASE_URL}${filename}" alt="${escapeHtml(imageDatabase[filename])}" class="rounded-lg mt-2 max-w-full h-auto">`;
+                }
+                return ''; // If image not in database, show nothing
+            });
+
+            // 2. Handle Links: [Link Text](https://...)
+            html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="underline text-cyan-400 hover:text-cyan-300">$1</a>');
+            
+            // 3. Handle Bold: **text**
+            html = html.replace(/\*\*([^\*]+)\*\*/g, '<b>$1</b>');
+
+            // 4. Handle Italics: *text*
+            html = html.replace(/\*([^\*]+)\*/g, '<i>$1</i>');
+            
+            return html;
+        }
+
+        // --- UPDATED addMessage function ---
         function addMessage(text, sender) {
             const messageWrapper = document.createElement('div');
             messageWrapper.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
-            
             const messageBubble = document.createElement('div');
-            messageBubble.className = `${sender === 'user' ? 'user-message' : 'ai-message'} text-white p-3 rounded-lg max-w-xs`;
-            messageBubble.textContent = text;
+            messageBubble.className = `${sender === 'user' ? 'user-message' : 'ai-message'} text-white p-3 rounded-lg max-w-xs text-left`;
             
+            if (sender === 'ai') {
+                messageBubble.innerHTML = parseMarkdown(text);
+            } else {
+                messageBubble.textContent = text;
+            }
+
             messageWrapper.appendChild(messageBubble);
             chatMessages.appendChild(messageWrapper);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
         
         async function askAdsphereAI(userQuery) {
-            // --- IMPROVED API KEY CHECK ---
             if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
-                addMessage("AI chat is not configured. Please add a Gemini API key in the HTML source.", "ai");
+                addMessage("AI chat is not configured.", "ai");
                 return;
             }
-            // --- END OF IMPROVED CHECK ---
 
-            chatLoading.classList.remove('hidden');
+            const loadingBubble = document.createElement('div');
+            loadingBubble.id = 'loading-indicator';
+            loadingBubble.className = 'flex justify-start';
+            loadingBubble.innerHTML = `<div class="ai-message text-white p-3 rounded-lg max-w-xs"><span class="animate-pulse">Typing...</span></div>`;
+            chatMessages.appendChild(loadingBubble);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
 
-            const systemInstruction = `You are "ADsphere AI", a friendly and helpful assistant for the ADsphere Telegram bot. Your goal is to answer user questions based ONLY on the following information about the bot. Be concise and direct. Do not mention that you are an AI. Do not go off-topic.
+            // --- NEW, UPGRADED SYSTEM INSTRUCTION ---
+            const systemInstruction = `You are "ADsphere AI". Your personality is friendly, approachable, and helpful, like talking to a knowledgeable friend. Use a conversational tone, simple language, and emojis to create a welcoming experience. Your main goal is to help users understand the ADsphere bot. You can also chat about general topics.
 
-            **Bot Name:** ADsphere ⚡
-            
-            **Core Function:** ADsphere is a Telegram bot for promoting content (links, channels) and earning rewards. Users can grow their audience with a fair system.
+            **RESPONSE FORMATTING RULES:**
+            - To make text bold, use asterisks, like **this**.
+            - To make text italic, use a single asterisk, like *this*.
+            - To create a clickable link, use Markdown format: [Link Text](https://example.com).
+            - **IMPORTANT:** To show a user an image for better explanation, you MUST use the special tag: [image:filename.png]. You can only use filenames from the "Available Images" list below.
 
-            **Key Features:**
-            - **Dynamic Ad Campaigns:** Users can create promotions for their links or to get members for their channels. They set a budget to control how many people see it.
-            - **Earn Credits:** Users can complete simple tasks (visiting links, joining channels) to earn credits. This allows them to promote their own content for free.
-            - **Advanced Group Sharing:** A feature to broadcast a user's message to many active Telegram groups at once for maximum exposure.
-            
-            **Premium Plans (Payment in Telegram Stars ⭐):**
-            - **1 Week:** 20 ⭐
-            - **1 Month (Most Popular):** 70 ⭐
-            - **3 Months:** 200 ⭐
-            
-            **Premium Benefits:** All premium plans offer the same benefits: Double rewards for completing tasks, more daily promotion opportunities, and the ability to broadcast images with captions.
-            
-            **Community Rules:**
-            1.  **No Illegal Content:** Promoting illegal, hateful, or explicit content results in a permanent ban.
-            2.  **Stay for Rewards:** For "Join Channel" tasks, users must stay in the channel for 4 days. Leaving early results in a credit penalty.
-            3.  **Fair Play:** No bots or scripts to automate tasks. All tasks must be done manually.
-            4.  **One Account:** Only one account per user is allowed.
-            
-            Answer the user's question based on this information.`;
+            ---
 
+            **AVAILABLE IMAGES FOR YOU TO USE:**
+            - **main_menu.png:** A screenshot showing the main menu of the ADsphere bot.
+            - **earn_credits_view.png:** An example of the task list for earning credits.
+            - **create_promo.png:** The menu for creating a new promotion.
+
+            ---
+
+            **ADSphere Bot KNOWLEDGE BASE:**
+
+            **Core Concept:**
+            ADsphere is a promotion-exchange platform on Telegram using an internal currency called "credits". Users earn credits by completing tasks and spend them to create their own promotional tasks for other users. The bot starts every new user with 30 free credits.
+
+            **Earning Credits:**
+            Users click the "Earn Credits" button to find tasks. There are two types: "Normal Link" tasks (visiting a link), which give 1 credit, and "Force-Join" tasks (joining a channel), which give 3 credits (6 for Premium members). For Force-Join tasks, users must stay in the channel for 4 days or they will be penalized double the credits they earned. The task list intelligently hides channels a user has already been rewarded for. Other ways to get credits include referring new users for a +2 credit bonus coupon and adding the bot to a large group for a larger bonus.
+
+            **Promoting Content:**
+            To create an ad, a user first goes to "Promote My Link" to save their content (either a link or a channel). Then, they click "Create Promotion", choose their content, and set a budget. Normal Link tasks cost 1 credit per user reached, and Force-Join tasks cost 2. Users can also use "Group Share" to send their ad to many groups at once for just 1 credit. Active promotions can be cancelled from this menu for a 90% refund of the remaining budget.
+
+            **Premium Membership:**
+            Premium users get significant benefits, including double rewards on Force-Join tasks (6 credits), more daily Group Share runs, and access to the "Image Broadcast" feature (sending an image with a caption to other users for 1 credit per 8 users reached). Premium plans are purchased with Telegram Stars: 1 Week for 20 ⭐, 1 Month for 70 ⭐, and 3 Months for 200 ⭐.
+
+            **Other Features:**
+            - **Buy Credits:** Users can buy credits directly with Stars at a rate of 3 credits per Star.
+            - **My Account:** Shows a user's stats, balances, and saved promotion details. Admins also see the total bot user count.
+            - **Leaderboard:** A weekly competition tracking users with the most promotion views.
+            - **Gift Credits:** Allows users to send credits to each other, with a 5% fee going to the bot owner.`;
+            
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
             
             const payload = {
                 contents: [{ parts: [{ text: userQuery }] }],
-                systemInstruction: { parts: [{ text: systemInstruction }] }
+                systemInstruction: { parts: [{ text: systemInstruction }] },
+                tools: [{ "google_search": {} }]
             };
 
             try {
@@ -328,21 +375,24 @@
                 });
 
                 if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('API Error Response:', errorData);
                     throw new Error(`API error: ${response.statusText}`);
                 }
 
                 const result = await response.json();
                 const aiResponse = result.candidates[0].content.parts[0].text;
+                
+                document.getElementById('loading-indicator')?.remove();
                 addMessage(aiResponse, 'ai');
 
             } catch (error) {
                 console.error('Error calling Gemini API:', error);
-                addMessage("Sorry, I'm having trouble connecting right now. Please try again later.", 'ai');
-            } finally {
-                chatLoading.classList.add('hidden');
+                document.getElementById('loading-indicator')?.remove();
+                addMessage("Sorry, I'm having trouble connecting right now. Please check the console for details and try again later.", 'ai');
             }
         }
-    </script>
+       </script>         
                 
 </body>
 </html>
